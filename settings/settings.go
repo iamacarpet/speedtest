@@ -10,4 +10,4 @@ var NUMLATENCYTESTS = 5
 var REPORTCHAR = "|"
 
 //ALGOTYPE is the type of algorithm to use for tests. There is "max" and "avg"
-var ALGOTYPE = "max"
+var ALGOTYPE = "avg"

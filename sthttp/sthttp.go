@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"fmt"
 )
 
 import (
@@ -16,11 +17,11 @@ import (
 )
 
 import (
-	"../coords"
-	"../debug"
-	"../misc"
-	"../settings"
-	"../stxml"
+	"github.com/iamacarpet/speedtest/coords"
+	"github.com/iamacarpet/speedtest/debug"
+	"github.com/iamacarpet/speedtest/misc"
+	"github.com/iamacarpet/speedtest/settings"
+	"github.com/iamacarpet/speedtest/stxml"
 )
 
 // SpeedtestConfigURL is where we pull the global 'config' from speedtest.net
@@ -107,7 +108,7 @@ func checkHTTP(resp *http.Response) bool {
 }
 
 // GetConfig downloads the master config from speedtest.net
-func GetConfig() Config {
+func GetConfig() (Config, error) {
 	client := &http.Client{
 		Timeout: HTTPConfigTimeout,
 	}
@@ -116,23 +117,23 @@ func GetConfig() Config {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		log.Fatalf("Couldn't retrieve our config from speedtest.net: 'Could not create connection'\n")
+		return Config{}, fmt.Errorf("Couldn't retrieve our config from speedtest.net: 'Could not create connection'\n")
 	}
 	defer resp.Body.Close()
 	if checkHTTP(resp) != true {
-		log.Fatalf("Couldn't retrieve our config from speedtest.net: '%s'\n", resp.Status)
+		return Config{}, fmt.Errorf("Couldn't retrieve our config from speedtest.net: '%s'\n", resp.Status)
 	}
 
 	body, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Fatalf("Couldn't retrieve our config from speedtest.net: 'Cannot read body'\n")
+		return Config{}, fmt.Errorf("Couldn't retrieve our config from speedtest.net: 'Cannot read body'\n")
 	}
 
 	cx := new(stxml.XMLConfigSettings)
 
 	err3 := xml.Unmarshal(body, &cx)
 	if err3 != nil {
-		log.Fatalf("Couldn't retrieve our config from speedtest.net: 'Cannot unmarshal XML'\n")
+		return Config{}, fmt.Errorf("Couldn't retrieve our config from speedtest.net: 'Cannot unmarshal XML'\n")
 	}
 
 	c := new(Config)
@@ -141,11 +142,11 @@ func GetConfig() Config {
 	c.Lon = misc.ToFloat(cx.Client.Lon)
 	c.Isp = cx.Client.Isp
 
-	return *c
+	return *c, nil
 }
 
 // GetServers will get the full server list
-func GetServers() []Server {
+func GetServers() ([]Server, error) {
 	var servers []Server
 
 	client := &http.Client{
@@ -156,20 +157,20 @@ func GetServers() []Server {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		log.Fatalf("Cannot get servers list from speedtest.net: 'Cannot contact server'\n")
+		return nil, fmt.Errorf("Cannot get servers list from speedtest.net: 'Cannot contact server'\n")
 	}
 	defer resp.Body.Close()
 
 	body, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Fatalf("Cannot get servers list from speedtest.net: 'Cannot read body'\n")
+		return nil, fmt.Errorf("Cannot get servers list from speedtest.net: 'Cannot read body'\n")
 	}
 
 	s := new(stxml.ServerSettings)
 
 	err3 := xml.Unmarshal(body, &s)
 	if err3 != nil {
-		log.Fatalf("Cannot get servers list from speedtest.net: 'Cannot unmarshal XML'\n")
+		return nil, fmt.Errorf("Cannot get servers list from speedtest.net: 'Cannot unmarshal XML'\n")
 	}
 
 	for xmlServer := range s.ServersContainer.XMLServers {
@@ -184,7 +185,7 @@ func GetServers() []Server {
 		server.ID = s.ServersContainer.XMLServers[xmlServer].ID
 		servers = append(servers, *server)
 	}
-	return servers
+	return servers, nil
 }
 
 // GetClosestServers takes the full server list and sorts by distance
@@ -342,7 +343,7 @@ func respBodyLen(resp *http.Response) int {
 }
 
 // DownloadSpeed measures the mbps of downloading a URL
-func DownloadSpeed(url string) float64 {
+func DownloadSpeed(url string) (float64, error) {
 	start := time.Now()
 	if debug.DEBUG {
 		log.Printf("Starting test at: %s\n", start)
@@ -354,7 +355,7 @@ func DownloadSpeed(url string) float64 {
 	req.Header.Set("Cache-Control", "no-cache")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Cannot test download speed of '%s' - 'Cannot contact server'\n", url)
+		return 0, fmt.Errorf("Cannot test download speed of '%s' - 'Cannot contact server'\n", url)
 	}
 	defer resp.Body.Close()
 
@@ -366,11 +367,11 @@ func DownloadSpeed(url string) float64 {
 	seconds := finish.Sub(start).Seconds()
 
 	mbps := megabits / float64(seconds)
-	return mbps
+	return mbps, nil
 }
 
 // UploadSpeed measures the mbps to http.Post to a URL
-func UploadSpeed(url string, mimetype string, data []byte) float64 {
+func UploadSpeed(url string, mimetype string, data []byte) (float64, error) {
 	buf := bytes.NewBuffer(data)
 
 	start := time.Now()
@@ -382,12 +383,12 @@ func UploadSpeed(url string, mimetype string, data []byte) float64 {
 	resp, err := http.Post(url, mimetype, buf)
 	finish := time.Now()
 	if err != nil {
-		log.Fatalf("Cannot test upload speed of '%s' - 'Cannot contact server'\n", url)
+		return 0, fmt.Errorf("Cannot test upload speed of '%s' - 'Cannot contact server'\n", url)
 	}
 	defer resp.Body.Close()
 	_, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Fatalf("Cannot test upload speed of '%s' - 'Cannot read body'\n", url)
+		return 0, fmt.Errorf("Cannot test upload speed of '%s' - 'Cannot read body'\n", url)
 	}
 
 	if debug.DEBUG {
@@ -401,5 +402,5 @@ func UploadSpeed(url string, mimetype string, data []byte) float64 {
 	seconds := finish.Sub(start).Seconds()
 
 	mbps := megabits / float64(seconds)
-	return mbps
+	return mbps, nil
 }

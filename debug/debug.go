@@ -4,7 +4,7 @@ package debug
 var DEBUG = false
 
 // QUIET will suppress all extraneous output
-var QUIET = false
+var QUIET = true
 
 // REPORT switches to reporting mode suitable for automated processing
 var REPORT = false

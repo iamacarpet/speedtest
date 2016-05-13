@@ -1,5 +1,8 @@
 The Unofficial Speedtest CLI
 ============================
+
+**** Originally by zpeters, modified by iamacarpet for use as a library ****
+
 The Unofficial Speedtest CLI is a command-line program to test
 bandwidth in situations where you don't have access to a full GUI
 environment and web browser.
@@ -36,7 +39,7 @@ Usage
 =====
 speedtest.exe -- normal run, will automatically select the closests/fastest server to test against
 ```shell
-$ bin/speedtest.exe 
+$ bin/speedtest.exe
 Finding fastest server..
 1752 | 5NINES (Madison, WI, United States)
 Testing download speed......
@@ -138,4 +141,3 @@ Reference
 =========
 - how does it work - https://support.speedtest.net/entries/20862782-How-does-the-test-itself-work-How-is-the-result-calculated-
 - why actual speedtest.net results may be inaccurate - http://testmy.net/
-   

@@ -7,15 +7,15 @@ import (
 )
 
 import (
-	"../debug"
-	"../misc"
-	"../print"
-	"../settings"
-	"../sthttp"
+	"github.com/iamacarpet/speedtest/debug"
+	"github.com/iamacarpet/speedtest/misc"
+	"github.com/iamacarpet/speedtest/print"
+	"github.com/iamacarpet/speedtest/settings"
+	"github.com/iamacarpet/speedtest/sthttp"
 )
 
 // DownloadTest will perform the "normal" speedtest download test
-func DownloadTest(server sthttp.Server) float64 {
+func DownloadTest(server sthttp.Server) (float64, error) {
 	var urls []string
 	var maxSpeed float64
 	var avgSpeed float64
@@ -41,7 +41,10 @@ func DownloadTest(server sthttp.Server) float64 {
 		if debug.DEBUG {
 			log.Printf("Download Test Run: %s\n", urls[u])
 		}
-		dlSpeed := sthttp.DownloadSpeed(urls[u])
+		dlSpeed, err := sthttp.DownloadSpeed(urls[u])
+		if err != nil {
+			return 0, err
+		}
 		if !debug.QUIET && !debug.DEBUG && !debug.REPORT {
 			fmt.Printf(".")
 		}
@@ -64,14 +67,14 @@ func DownloadTest(server sthttp.Server) float64 {
 	}
 
 	if settings.ALGOTYPE != "max" {
-		return avgSpeed / float64(len(urls))
+		return avgSpeed / float64(len(urls)), nil
 	}
-	return maxSpeed
+	return maxSpeed, nil
 
 }
 
 // UploadTest runs a "normal" speedtest upload test
-func UploadTest(server sthttp.Server) float64 {
+func UploadTest(server sthttp.Server) (float64, error) {
 	// https://github.com/sivel/speedtest-cli/blob/master/speedtest-cli
 	var ulsize []int
 	var maxSpeed float64
@@ -98,7 +101,10 @@ func UploadTest(server sthttp.Server) float64 {
 			log.Printf("Upload Test Run: %v\n", i)
 		}
 		r := misc.Urandom(ulsize[i])
-		ulSpeed := sthttp.UploadSpeed(server.URL, "text/xml", r)
+		ulSpeed, err := sthttp.UploadSpeed(server.URL, "text/xml", r)
+		if err != nil {
+			return 0, err
+		}
 		if !debug.QUIET && !debug.DEBUG && !debug.REPORT {
 			fmt.Printf(".")
 		}
@@ -122,13 +128,13 @@ func UploadTest(server sthttp.Server) float64 {
 	}
 
 	if settings.ALGOTYPE != "max" {
-		return avgSpeed / float64(len(ulsizesizes))
+		return avgSpeed / float64(len(ulsizesizes)), nil
 	}
-	return maxSpeed
+	return maxSpeed, nil
 }
 
 // FindServer will find a specific server in the servers list
-func FindServer(id string, serversList []sthttp.Server) sthttp.Server {
+func FindServer(id string, serversList []sthttp.Server) (sthttp.Server, error) {
 	var foundServer sthttp.Server
 	for s := range serversList {
 		if serversList[s].ID == id {
@@ -136,17 +142,21 @@ func FindServer(id string, serversList []sthttp.Server) sthttp.Server {
 		}
 	}
 	if foundServer.ID == "" {
-		log.Fatalf("Cannot locate server Id '%s' in our list of speedtest servers!\n", id)
+		return foundServer, fmt.Errorf("Cannot locate server Id '%s' in our list of speedtest servers!\n", id)
 	}
-	return foundServer
+	return foundServer, nil
 }
 
 // ListServers prints a list of all "global" servers
-func ListServers() {
+func ListServers() (error) {
 	if debug.DEBUG {
 		fmt.Printf("Loading config from speedtest.net\n")
 	}
-	sthttp.CONFIG = sthttp.GetConfig()
+	var err error
+	sthttp.CONFIG, err = sthttp.GetConfig()
+	if err != nil {
+		return err
+	}
 	if debug.DEBUG {
 		fmt.Printf("\n")
 	}
@@ -154,7 +164,10 @@ func ListServers() {
 	if debug.DEBUG {
 		fmt.Printf("Getting servers list...")
 	}
-	allServers := sthttp.GetServers()
+	allServers, err := sthttp.GetServers()
+	if err != nil {
+		return err
+	}
 	if debug.DEBUG {
 		fmt.Printf("(%d) found\n", len(allServers))
 	}
@@ -162,4 +175,6 @@ func ListServers() {
 		server := allServers[s]
 		print.Server(server)
 	}
+
+	return nil
 }

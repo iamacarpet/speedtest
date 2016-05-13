@@ -13,9 +13,9 @@ import (
 )
 
 import (
-	"../debug"
-	"../settings"
-	"../sthttp"
+	"github.com/iamacarpet/speedtest/debug"
+	"github.com/iamacarpet/speedtest/settings"
+	"github.com/iamacarpet/speedtest/sthttp"
 )
 
 // Server prints the results in "human" format
