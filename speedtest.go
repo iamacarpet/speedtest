@@ -16,11 +16,11 @@ import (
 )
 
 import (
-	"./debug"
-	"./print"
-	"./settings"
-	"./sthttp"
-	"./tests"
+	"github.com/iamacarpet/speedtest/debug"
+	"github.com/iamacarpet/speedtest/print"
+	"github.com/iamacarpet/speedtest/settings"
+	"github.com/iamacarpet/speedtest/sthttp"
+	"github.com/iamacarpet/speedtest/tests"
 )
 
 // VERSION is the version of our software
